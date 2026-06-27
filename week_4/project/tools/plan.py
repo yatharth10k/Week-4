@@ -29,7 +29,7 @@ def get_todos()->dict:
 
 
 
-def mark_todo(todo_id:int, status:str, command_result:None) ->dict:
+def mark_todo(todo_id:int, status:str, command_result=None) ->dict:
     if status not in VALID_STATUS:
         return {"error": "Invalid status."}
     for todo in TODOS:

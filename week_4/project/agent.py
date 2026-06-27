@@ -57,6 +57,8 @@ class Agent:
             ]
 
     def chat(self, user_message: str) -> str:
+        TODOS.clear()
+        self.last_command_result = None
         self.messages.append(
             {"role":"user",
             "content":user_message}
@@ -118,14 +120,10 @@ class Agent:
                         }
                     )
                     if result.get("cancelled"):
-                        self.messages.append(
-                            {
-                                "role": "system",
-                                "content":
-                                "The user denied permission for this destructive command. "
-                                "Do NOT retry it or attempt equivalent destructive commands. "
-                                "Explain to the user that the action cannot proceed without approval.",
-                            }
+                        TODOS.clear()
+                        return (
+                            "The requested command required approval. "
+                            "You denied permission, so the operation was cancelled."
                         )
         return "Hit iteration limit!"
 

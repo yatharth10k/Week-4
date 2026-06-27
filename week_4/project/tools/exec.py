@@ -10,13 +10,13 @@ MAX_OUTPUT_CHARS = 8_000
 READ_ONLY_PREFIXES = (
     "grep", "find", "ls", "cat", "head", "tail", "wc",
     "git log", "git diff", "git status", "git blame", "git show",
-    "pytest", "python -m pytest", "ruff", "flake8", "mypy", "dir", "type", "more",
+    "pytest", "python -m pytest", "ruff", "flake8", "mypy", "dir", "type", "more", "powershell Get-Content"
 )
 
 # Known-destructive: always ask, even if they'd otherwise look harmless.
 DESTRUCTIVE_PATTERNS = (
     "rm ", "mv ", ">", ">>", "git commit", "git push", "git checkout --",
-    "pip install", "npm install", "curl ", "sudo ", "chmod ", "notepad", "start",
+    "pip install", "npm install", "curl ", "sudo ", "chmod ", "notepad", "start", "del"
 )
 
 
@@ -36,24 +36,25 @@ def paths_within_sandbox(command: str, workspace_root: str) -> bool:
 
 def classify_command(command: str) -> str:
     _ = command
-    for pattern in DESTRUCTIVE_PATTERNS:
-        if pattern in _:
-            return "ask"
+    cmd = command.lower()
     for pattern in READ_ONLY_PREFIXES:
-        if _.startswith(pattern):
+        if pattern.lower() in cmd:
             return "read_only"
+    for pattern in DESTRUCTIVE_PATTERNS:
+        if pattern.lower() in cmd:
+            return "ask"
     return "ask"
 
 def run_command(command: str, cwd: str = WORKSPACE_ROOT, timeout: int = TIMEOUT_DEFAULT) -> dict:
     _ = (command, cwd, timeout)
     if not paths_within_sandbox(command, cwd):
-        return {"error": "Command escapes workspace sandbox."}
+        return {"error": "Command escapes workspace sandbox.", "exit_code":-1}
     if classify_command(command)!="read_only":
         x=input(f"This command ({command}) is a destructive command, it could modify your system, do you wish to proceed? [y/n]: ").strip().lower()
         if x=="n":
-            return {"error": "cancelled by user!", "cancelled":True}
+            return {"error": "cancelled by user!", "cancelled":True, "exit_code":-1}
         elif x!="y":
-            return {"error": "Invalid input."}
+            return {"error": "Invalid input.", "exit_code":-1}
     try:
         result=subprocess.run(
             command,
@@ -69,7 +70,7 @@ def run_command(command: str, cwd: str = WORKSPACE_ROOT, timeout: int = TIMEOUT_
             "exit_code": result.returncode,
         }
     except subprocess.TimeoutExpired:
-        return {"error": "Command timeout"}
+        return {"error": "Command timeout", "exit_code":-1}
 
 TOOLS = [
     {
