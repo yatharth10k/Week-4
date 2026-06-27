@@ -1,0 +1,2 @@
+OpenAI
+python-dotenv
